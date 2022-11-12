@@ -1,0 +1,133 @@
+#!/bin/bash
+lvl=1 # Decides difficulty rating
+num=1 # Stores the correct number user has to guess
+count=0 # Stores ammount of guesses the user makes for each guess
+time=0 # Stores the amount of time it takes for user to guess
+cat << EOF
+||||||  ||   ||  |||||||    ||||||   ||||||     ||||         ||||
+|       ||   ||  |         |||  ||| |||  ||| |||||||||||||||||||||||
+|       ||   ||  |         |||       |||        ||||         ||||
+|       ||   ||  |||||||    |||       |||       ||||         ||||
+|  |||  ||   ||  |           |||       |||      ||||         ||||
+|    |  ||   ||  |       |||  |||  |||  |||  |||||||||||||||||||||||
+||||||  |||||||  |||||||  ||||||    ||||||      ||||         ||||
+EOF
+cat << EOF
+Usage: use single letter command to play the game
+h - help, show this command list
+e- do excercise by oneself
+c - change game difficulty level
+q - quit the game
+p - participate competition
+s - show my score in descending order
+l - show my place in all gamers"
+EOF
+#Order structures of commands in logical order. For example you would have your change diffiulty before the actual excercise.
+help()
+{
+cat<<EOF
+Usage: use single letter command to play the game
+h - help, show this command list
+e - do excercise by oneself
+c - change game difficulty level
+q - quit the game
+p - participate competition
+s - show my score in descending order
+l - show my place in all gamers"
+EOF
+}
+
+difficulty() 
+{
+cat<<EOF
+    --- About Difficulty Level ---
+Level 1: guess a number between 1 to 100
+Level 2: guess a number between 1 to 1000
+Level 3: guess a number between 1 to 10000
+=== Current Difficulty Level : 1 ===
+1) EASY
+2) INTERMEDIATE
+3) HARD
+Select a new difficulty level: 
+EOF
+
+read lvl
+
+echo "=== New Difficulty Level: $lvl ==="
+}
+
+participate()
+{
+cat<<EOF
+EOF
+}
+excercise() # Problem #1 Does not record score properly | Problem #2 Modify random range to dynamically change depending on level
+{
+cat<<EOF
+     _                     _      _                                           
+    )_)   _   _   _ )       )    / _  _  |                                    
+    / \   )_) (_( (_(  (_(  o    (__/ (_) o                                   
+        (_              _) 
+=== Current Difficulty Level : $lvl ===                                                     
+guess a number between 1 to 10000   
+EOF
+    echo "guess a number between 1 to 100"
+    targetnum=$(($RANDOM % 100 + 1))
+    #The random parameter
+    #The $ symbol signifys sending data you write to a second command's standard input
+   
+    starting="$SECONDS"
+    
+    echo
+    until [ $num -eq $targetnum ]; do 
+
+        #Until loop checks the condition | If the condition is false, then executes the statments and goes back to step 1| If the condition if true, then the program control moves to the next command in the script
+        #Won't move to next step till number is equal to target number
+        #Loop parameters need to be spaced from the start and end of the parameter and a space before the condition
+
+        read -p "Your guess: " num
+        # The -p command runs the script directly
+        if [ $num -gt $targetnum ]; then
+            echo "too large"
+        else 
+            echo "too small"
+        fi
+            ((count++)) 
+            #Finishing statement if the statment is true
+    done
+    echo "Congratulation! You get it!"
+    time=$(($SECONDS - $starting))
+    ((myScore= lvl*10000/(time*count))) #Equation for score
+    echo "tried $count times, elpased: $time, my score: $myScore"
+}
+
+descendingScore()
+{
+cat<<EOF
+EOF
+}
+
+highScores()
+{
+cat<<EOF
+EOF
+}
+quit()
+{
+cat<<EOF
+EOF
+}
+echo -n 'Enter your command:'
+read -r userInput
+
+case $userInput in # Begining of the case...esac statement
+h) help;;
+        
+e) excercise;;
+c) difficulty;;
+q) quit;;
+p) participate;;
+s) descendingScore;;
+l) highScores;;
+*) echo "Invalid entry. Please try an option on the menu";;
+esac # End of the case...esac statment
