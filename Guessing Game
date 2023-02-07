@@ -10,6 +10,7 @@ num=1 # Stores the correct number user has to guess
 count=1 # Stores ammount of guesses the user makes for each guess
 time=0 # Stores the amount of time it takes for user to guess
 continue="Y"
+next=1;
 regionNum=0
 region="SOUTH"
 seasonNum=0
@@ -17,8 +18,14 @@ nameNum=0
 season="SPRING"
 gameId=0
 myScore=0
- 
- 
+display=1 #set to 1 in order to use the r command fully
+RED='\033[0;31m'
+NC='\033[0m'
+WHITE='\033[0;37m'
+regionList=("SOUTH" "NORTHEAST" "MIDWEST" "WEST")
+filePath="./data/regionresults.txt"
+qualified=0 #Check qualification for participateNational to see if player can play
+isNational=0 #Checks whether in nationals
 checkData()
 {
 #Make three separate if statments for each directory and or file
@@ -55,7 +62,12 @@ echo "-------------------------------------------"
  
 loadData() # %d takes integer value as signed decimal integer | %s lets you add a string | %f is floating point number
 {
-printf "%d,%s,%s,%s,%d,%d,%d,%f\n" $gameId "$name" "$region" "$season" $lvl $count $time $myScore >> ./data/regionresults.txt
+if [ $qualified -eq 0 ]
+	then
+		printf "%d,%s,%s,%s,%d,%d,%d,%f\n" $gameId "$name" "$region" "$season" $lvl $count $time $myScore >> $filePath
+    	else 
+        	printf "%d,%s,%s,%d,%d,%f\n" $gameId "$name" "$region" $count $time $myScore >> $filePath
+	fi
 }
  
 getData()
@@ -93,9 +105,14 @@ h - help, show this command list
 e - do excercise by oneself
 c - change game difficulty level
 q - quit the game
-p - participate competition
+p - participate regional competition
 s - show my score in descending order
 l - show my place in all gamers
+r - show regional top three in descending order
+a - check my qualification of attending national arena
+n - show national competitors
+P - participate national competition
+w - print national winners
 EOF
 }
  
@@ -165,7 +182,13 @@ case $regionNum in
     4) region="WEST";;
     *) echo "You didn't make your choice!"
 esac
-selectSeason
+#selectSeason
+if [ $next -eq 1 ]
+    then
+        selectSeason
+    else  
+        next=1;
+fi
 }
  
 selectSeason()
@@ -199,7 +222,7 @@ then
 fi
 }
  
-participate()
+participateRegional()
 {
    echo "Welcome to the national game of guessing numbers!"
 getGameId
@@ -225,9 +248,59 @@ else
 fi
 }
  
-showData()
+participateNational()
 {
     getGameId
+    getData
+    
+    next=0
+    qualified=1
+    
+    checkQual
+   
+ 
+if [[ $isNational -eq 1 ]]
+
+ then
+ record=$(grep "\<$region\>" $filePath | sort -t ',' -rn -k 8,8 | awk -F, '!a[$1]++' | head -n 3 | grep -c "\<$gameId\>") #Command does not work if I directly add the file path
+  filePath="./data/nationresults.txt" #Didn't work because I had filePath after record2 declaration
+ record2=$(grep -c "\<$gameId\>" $filePath)
+
+ 
+ if [ $record -eq 0 ] 
+    then
+        echo "Hello $name, you are not in the top 3 of the $region arena!"
+elif [ $record2 -gt 0 ]
+    then
+        echo "Hello $name, you can play only ONCE in the national arena!"
+else
+    echo "Hello $name, Welcome to the National arena of guessing numbers!"
+    lvl=3
+    excercise
+    fi
+fi
+filePath="./data/regionresults.txt" #Reverting to oringinal path
+qualified=0 #setting back to 0
+}
+ 
+nationalComp()
+{
+   for t in "${regionList[@]}" #Specifies the range | will display
+   do #Will perform said action
+    display=0
+    region=$t
+    topThree
+    echo""
+    done #End of for loop
+}
+ 
+showData()
+{
+    if [ $gameId -eq 0 ]
+    	then
+    		getGameId
+    fi
+    
     record=$(grep -c "$gameId" data/regionresults.txt)
     if [[ record -eq 0 ]]
     then
@@ -238,7 +311,12 @@ showData()
 EOF
     else #Issues with printing score
         getData
-        echo "Hello $name, here are your Competitions"
+        if [ $display -eq 1 ]
+        	then
+        	echo "Hello $name, here are your Competitions"
+        	else
+        		display=1
+		fi
         cat <<EOF
 -------------------------------------------------
 Region     Season   Level    Times Seconds  Score
@@ -250,9 +328,65 @@ EOF
    
 }
  
+checkQual() #Check
+{
+    display=0
+    if [[ $gameId -eq 0 ]]
+    then
+    getGameId
+    fi
+    
+    getData
+    record=$(grep "$gameId" data/regionresults.txt | awk -F, '!a[$3]++' | wc -l)
+ 
+    if [[ $record -gt 1 ]]
+    then
+    
+	echo "Dear $name, You competed in $record regions so you are DISQUALIFIED!" 
+	echo "
+Below are your records:"
+
+    	showData
+   
+    elif [[ $record -eq 0 ]]
+    then
+        cat <<EOF
+         
+You did NOT participate any regional arenas yet.
+ Please participate regional arenas first.
+ Good luck!
+EOF
+ 
+    elif [[ $record -eq 1 && $next -eq 1 ]]
+    then
+    echo "Congratulations! $name, you are qualified to attend the national arena!"
+   
+ 
+echo -e "===== ${RED} Your place in region $region ${NC}======"
+ cat <<EOF
+----------------------------------------------------------------------------
+ID        Name             Region     Season   Level    Times Seconds  Score
+----------------------------------------------------------------------------
+EOF
+       grep "\<$region\>" ./data/regionresults.txt | sort  -t ',' -rn -k 8,8 | awk -F, '!a[$1]++' | head -n 3  | awk -F',' '{
+        if($1=='$gameId') 
+            printf("'$RED'%s %-16s %-10s %-8s %-8d %-5d %-7d %6.2f\n",$1, $2, $3, $4, $5, $6, $7, $8); 
+        else 
+            printf("'$NC'%s %-16s %-10s %-8s %-8d %-5d %-7d %6.2f\n",$1, $2, $3, $4, $5, $6, $7, $8)
+    }'; 
+    echo "----------------------------------------------------------------------------"
+    else
+ isNational=1
+ next=1
+ #maybe add continue=1
+fi
+}
+ 
 excercise()
 {
 starting=$SECONDS
+continue="Y"
+
 cat<<EOF
      _                     _      _                                          
     )_)   _   _   _ )       )    / _  _   |                                    
@@ -262,7 +396,6 @@ cat<<EOF
 guess a number between 1 to $((10**lvl*10))  
 EOF
  
-echo
 targetNum=$(($RANDOM % (10**lvl*10))) #** acts like the power
 #The random parameter
 #The $ symbol signifys sending data you write to a second command's standard input
@@ -270,8 +403,8 @@ targetNum=$(($RANDOM % (10**lvl*10))) #** acts like the power
 while [ $continue != "N" ] && [ $continue != "n" ] #When you chose option 2
 do
  
-time=$((SECONDS - $starting))
-read -p "Your guess:" num
+time=$((SECONDS - starting))
+read -r -p "Your guess:" num
  
 if [ $num -gt $targetNum ]
 then
@@ -290,9 +423,15 @@ cat<<EOF
     Congratulation! You get it!
     You used $time seconds, tried $count times, scored $myScore
 EOF
- 
-read -r -p "Continue Practicing? Enter Y or N:" continue
+
+if [ $qualified -eq 0 ]
+	then
+		read -r -p "Continue Practicing? Enter Y or N:" continue
+	else
+		continue="N"
+	fi
 targetNum=$((RANDOM % (10**lvl*10)))
+count=1
 #Modification for Stage 2
 if [[ "$continue" = "Y"  ||  "$continue" = "y" ]]
 then starting=$SECONDS;
@@ -339,6 +478,45 @@ EOF
         fi
 }
  
+topThree()
+{
+    next=0
+if [[ $display -eq  1 ]]
+    then #Used the contents of the 'then' as a placeholder to find content to print the 'else' statement
+    selectRegion
+    else
+    display=1
+fi
+echo -e "\t\t==== ${RED} The Top 3 of region $region ${NC}======"
+cat <<EOF
+----------------------------------------------------------------------------------
+ID        Name             Region     Season   Level    Times Seconds    Score
+----------------------------------------------------------------------------------
+EOF
+grep "\<$region\>" ./data/regionresults.txt | sort -t ',' -rn -k 8,8 | awk -F, '!a[$1]++' | head -n 3 | awk -F',' '{printf("%s %-16s %-10s %-8s %-8d %-5d %-9d '$RED'%6.2f\n'$NC'",$1, $2, $3, $4, $5, $6, $7, $8)}';#NC modifies the other columns to not be red
+echo "----------------------------------------------------------------------------------"
+}
+ 
+nationalWinners()
+{
+   echo -e "******************${RED}NATIONAL WINNERS${NC}**************************"
+   cat <<EOF
+        Name            Region              Score Medal
+************************************************************
+EOF
+    sort ./data/nationresults.txt -t ',' -rn -k 8,8 | head -n 6 | awk -F',' -v red="$RED" -v white="$WHITE"  '
+    BEGIN{
+        medals="Gold,Silver,Silver,Bronze,Bronze,Bronze"; split(medals,medal,",");
+    }
+    {
+        if(NR % 2)
+            printf("%s%-10s %-10s %8.2f %-8s%s\n", red, $2, $3, $6, medal[NR],white );
+        else
+            printf("%-10s %-10s %8.2f %-8s\n", $2, $3, $6, medal[NR] );
+    }';
+    
+}
+ 
 quit()
 {
 cat<<EOF
@@ -355,15 +533,19 @@ while [ $quitStatus != "1" ] #Beginning of do while loop
 do
 echo
 read -p "Enter your command:" userInput #Enter command can go here so it appears before the prompt and user input
- 
 case $userInput in #Beginning of the case...esac statement
     h) help;;    
     e) excercise;;
     c) difficulty;;
     q) quit;;
-    p) participate;;
+    p) participateRegional;;
     s) showData;;
     l) scoreBoard;;
+    r) topThree;;
+    a) checkQual;;
+    n) nationalComp;;
+    P) participateNational;;
+    w) nationalWinners;;
     *) echo "Invalid entry. Please try an option on the menu";;
 esac #End of the case...esac statment
 done #End of do while loop
